@@ -1,11 +1,9 @@
 <?php
 session_start();
-if (!isset($_SESSION['username']) || 
-    !in_array($_SESSION['usertype'], ['Secretary', 'Auditor', 'Treasurer', 'Social Manager', 'Senator'])) {
-    echo "<script>window.top.location.href='../login.php';</script>";
+if (!isset($_SESSION['username']) || !in_array($_SESSION['usertype'], ['Governor', 'Vice Governor'])) {
+    header("Location: ../login.php");
     exit();
 }
-
 
 // Database Connection
 $conn = new mysqli("localhost", "root", "", "csso");
@@ -223,3 +221,6 @@ function calculateAge() {
 </div>
 </body>
 </html>
+
+
+

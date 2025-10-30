@@ -10,6 +10,7 @@ $totalStudents = $conn->query("SELECT COUNT(*) FROM student_profile")->fetch_row
 $registrationCollected = $conn->query("SELECT IFNULL(SUM(amount),0) FROM registration WHERE payment_status='Paid'")->fetch_row()[0] ?? 0;
 $finesCollected = $conn->query("SELECT IFNULL(SUM(penalty_amount),0) FROM fines_payments WHERE payment_status='Paid'")->fetch_row()[0] ?? 0;
 $totalIncome = $registrationCollected + $finesCollected;
+$totalUsers = $conn->query("SELECT COUNT(*) FROM users")->fetch_row()[0] ?? 0;
 
 $recent = $conn->query("SELECT sp.FirstName, sp.LastName, r.registration_date 
                         FROM registration r 
@@ -54,10 +55,11 @@ body {
 .card i {
     font-size: 38px;
 }
-.card.blue i { color: #1aa0ffff; }
-.card.green i { color: #00c950ff; }
-.card.yellow i { color: #f4d800ff; }
-.card.purple i { color: #5000d9ff; }
+.card.blue i { color: #1e40af; }
+.card.green i { color: #00ff66ff; }
+.card.yellow i { color: #f59e0b; }
+.card.purple i { color: #7c3aed; }
+.card.red i { color: #dc2626; }
 
 .card h3 {
     margin: 0;
@@ -88,7 +90,7 @@ body {
 
 /* Recent Table */
 .recent h3 {
-    color: #00123acd;
+    color: #0f172a;
     font-size: 18px;
     margin-bottom: 10px;
     border-bottom: 2px solid #e2e8f0;
@@ -104,13 +106,13 @@ body {
     border-bottom: 1px solid #f1f5f9;
 }
 .recent th {
-    background: #0051ffcd;
+    background: #0a1931;
     color: #fff;
 }
 
 /* Calendar */
 .calendar h3 {
-    color: #00123acd;
+    color: #0f172a;
     font-size: 18px;
     margin-bottom: 15px;
     border-bottom: 2px solid #e2e8f0;
@@ -175,6 +177,13 @@ body {
             <div>
                 <h3>Total Income</h3>
                 <p>₱<?= number_format($totalIncome, 2) ?></p>
+            </div>
+        </div>
+        <div class="card red">
+            <i class="fa fa-user"></i>
+            <div>
+                <h3>Total Users Registered</h3>
+                <p><?= $totalUsers ?></p>
             </div>
         </div>
     </div>
@@ -243,3 +252,4 @@ generateCalendar();
 </script>
 </body>
 </html>
+

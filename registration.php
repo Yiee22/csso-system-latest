@@ -344,3 +344,10 @@ function showReceiptPopup(no, id, fullname, date, sem, fee, amount, type) {
 
 </body>
 </html>
+
+
+
+
+
+
+
