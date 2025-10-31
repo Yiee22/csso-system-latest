@@ -2,7 +2,9 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-if (!isset($_SESSION['username']) || !in_array($_SESSION['usertype'], ['Secretary', 'Treasurer', 'Governor', 'Vice Governor'])) {
+
+// ✅ Check if logged in and allowed user types
+if (!isset($_SESSION['username']) || !in_array($_SESSION['usertype'], ['Secretary', 'Treasurer', 'Auditor', 'Social Manager', 'Senator', 'Governor', 'Vice Governor'])) {
     header("Location: ../login.php");
     exit();
 }
@@ -11,6 +13,7 @@ if (!isset($_SESSION['username']) || !in_array($_SESSION['usertype'], ['Secretar
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>User Dashboard | CSSO</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -19,167 +22,332 @@ if (!isset($_SESSION['username']) || !in_array($_SESSION['usertype'], ['Secretar
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
+
 body {
-  background: #f7f9fc;
-  color: #333;
+  background: #f0f4f8;
+  color: #1e3a5f;
   height: 100vh;
   display: flex;
   overflow: hidden;
 }
 
-/* Sidebar */
+/* ===== SIDEBAR ===== */
 .sidebar {
-  width: 250px;
-  background: #fff;
+  width: 260px;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease;
-  border-right: 1px solid #e2e8f0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 3px 0 15px rgba(0, 0, 0, 0.06);
   overflow: hidden;
-}
-.sidebar.collapsed {
-  width: 80px;
-}
-.sidebar-header {
-  text-align: center;
-  padding: 15px 10px;
-  background: #0061feff;
-}
-.sidebar-header img {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  border: 3px solid #fff;
-  transition: all 0.3s ease;
-}
-.sidebar.collapsed .sidebar-header img {
-  width: 45px;
-  height: 45px;
+  position: relative;
 }
 
-/* Menu Styling */
-.menu {
-  list-style: none;
-  padding: 10px 0;
-  margin: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.sidebar.collapsed {
+  width: 75px;
 }
-.menu li {
-  padding: 12px 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  border-radius: 8px;
-  margin: 3px 10px;
-  transition: all 0.25s ease;
-}
-.menu li:hover,
-.menu li.active {
-  background: #e2e8f0;
-}
-.menu li i {
-  font-size: 18px;
-  min-width: 25px;
+
+/* Sidebar Header */
+.sidebar-header {
+  padding: 22px 20px;
   text-align: center;
-  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  position: relative;
+  overflow: hidden;
 }
-.menu li span {
-  font-weight: 500;
-  color: #111;
-  white-space: nowrap;
+
+.sidebar-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(30, 64, 175, 0.2) 100%);
+  opacity: 0;
   transition: opacity 0.3s ease;
 }
 
-/* Collapsed mode */
-.sidebar.collapsed .menu li {
-  justify-content: center;
-  padding: 12px 0;
-}
-.sidebar.collapsed .menu li i {
-  font-size: 20px;
-  margin-right: 0;
-}
-.sidebar.collapsed .menu li span {
-  opacity: 0;
-  pointer-events: none;
-  width: 0;
+.sidebar-header:hover::before {
+  opacity: 1;
 }
 
-/* Tooltip on hover (collapsed mode) */
+.sidebar-header img {
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  background: #fff;
+  padding: 5px;
+}
+
+.sidebar.collapsed .sidebar-header img {
+  width: 48px;
+  height: 48px;
+  border-width: 2px;
+}
+
+/* Menu */
+.menu {
+  list-style: none;
+  padding: 12px 14px;
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu li {
+  padding: 11px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  border-radius: 10px;
+  margin-bottom: 3px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #475569;
+  font-size: 15px;
+  font-weight: 500;
+  position: relative;
+}
+
+.menu li:hover {
+  background: #e0f2fe;
+  color: #0284c7;
+  transform: translateX(5px);
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15);
+}
+
+.menu li.active {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+  font-weight: 600;
+}
+
+.menu li.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 70%;
+  background: #ffffff;
+  border-radius: 0 4px 4px 0;
+}
+
+.menu li i {
+  font-size: 18px;
+  min-width: 24px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.menu li span {
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+/* Collapsed Sidebar */
+.sidebar.collapsed .menu li {
+  justify-content: center;
+  padding: 11px 0;
+}
+
+.sidebar.collapsed .menu li span {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
 .sidebar.collapsed .menu li:hover::after {
   content: attr(data-title);
   position: absolute;
-  left: 85px;
-  background: #0a1931;
-  color: #fff;
-  padding: 5px 10px;
-  border-radius: 6px;
+  left: 82px;
+  background: #1e293b;
+  color: #ffffff;
+  padding: 9px 15px;
+  border-radius: 10px;
   font-size: 13px;
   white-space: nowrap;
-  z-index: 999;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  z-index: 1000;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  animation: tooltipFade 0.2s ease;
 }
 
-/* Main Area */
+@keyframes tooltipFade {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ===== MAIN AREA ===== */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  background: #f0f4f8;
 }
+
+/* Topbar */
 .topbar {
-  background: #fff;
-  padding: 15px 25px;
-  border-bottom: 2px solid #e2e8f0;
+  background: #ffffff;
+  padding: 16px 30px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #0a1931;
+  z-index: 10;
+  border-bottom: 2px solid #e0f2fe;
+  min-height: 70px;
 }
+
 .topbar-left {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-.toggle-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: #0a1931;
-  cursor: pointer;
-  margin-right: 10px;
-  transition: color 0.3s ease;
-}
-.toggle-btn:hover {
-  color: #1d4ed8;
-}
-.topbar h2 {
-  font-weight: 600;
-  color: #0a1931;
-}
-.user-info {
-  text-align: right;
-  color: #0a1931;
-  font-size: 14px;
-  line-height: 1.4;
-}
-.user-info strong {
-  font-size: 16px;
-  color: #0a1931;
+  gap: 20px;
 }
 
-/* Iframe */
+.toggle-btn {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 18px;
+  color: #0284c7;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15);
+}
+
+.toggle-btn:hover {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #ffffff;
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+.toggle-btn:active {
+  transform: scale(0.96);
+}
+
+.topbar h2 {
+  font-weight: 600;
+  color: #1e3a5f;
+  font-size: 32px;
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+
+/* User Info */
+.user-info {
+  text-align: right;
+  line-height: 1.6;
+}
+
+.user-info strong {
+  font-size: 15px;
+  color: #1e3a5f;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.user-info .role {
+  display: inline-block;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.3);
+}
+
+.user-info .datetime {
+  font-size: 12.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Iframe Container */
+.content-container {
+  flex: 1;
+  padding: 22px;
+  overflow: auto;
+  background: #f0f4f8;
+}
+
 iframe {
   width: 100%;
-  height: calc(100vh - 70px);
+  height: 100%;
   border: none;
-  background: #f7f9fc;
-  transition: all 0.3s ease;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+  }
+  
+  .sidebar.active {
+    left: 0;
+  }
+  
+  .topbar h2 {
+    font-size: 16px;
+  }
+  
+  .user-info {
+    display: none;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 </style>
 </head>
@@ -218,83 +386,97 @@ iframe {
   </ul>
 </div>
 
-<!-- Main -->
+<!-- Main Content -->
 <div class="main">
   <div class="topbar">
     <div class="topbar-left">
-      <button id="toggleSidebar" class="toggle-btn"><i class="fa fa-bars"></i></button>
+      <button id="toggleSidebar" class="toggle-btn">
+        <i class="fa fa-bars"></i>
+      </button>
       <h2>Computer Studies Student Organization</h2>
     </div>
     <div class="user-info">
-      <strong>Welcome, <?= htmlspecialchars($_SESSION['username']) ?></strong><br>
-      <?= htmlspecialchars($_SESSION['usertype']) ?><br>
-      <span id="datetime"></span>
+      <strong><?= htmlspecialchars($_SESSION['username']) ?></strong>
+      <span class="role"><?= htmlspecialchars($_SESSION['usertype']) ?></span>
+      <div class="datetime" id="datetime"></div>
     </div>
   </div>
 
-  <!-- Default Content Frame -->
-  <iframe id="contentFrame" src="dashboard.php"></iframe>
+  <!-- Content Frame -->
+  <div class="content-container">
+    <iframe id="contentFrame" src="dashboard.php"></iframe>
+  </div>
 </div>
 
 <script>
 const sidebar = document.getElementById("sidebar");
 const toggleBtn = document.getElementById("toggleSidebar");
 
-toggleBtn.onclick = () => {
+// Toggle Sidebar
+toggleBtn.addEventListener('click', () => {
   sidebar.classList.toggle("collapsed");
-};
+});
 
+// Update DateTime
 function updateDateTime() {
   const now = new Date();
-  document.getElementById('datetime').textContent =
-    now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) +
-    ' | ' + now.toLocaleTimeString();
+  const options = { 
+    weekday: 'short', 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  };
+  const date = now.toLocaleDateString('en-US', options);
+  const time = now.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit'
+  });
+  document.getElementById('datetime').textContent = `${date} • ${time}`;
 }
 setInterval(updateDateTime, 1000);
 updateDateTime();
 
-function navigate(page, element){
+// Navigate
+function navigate(page, element) {
   document.getElementById('contentFrame').src = page;
-  document.querySelectorAll('.menu li').forEach(i => i.classList.remove('active'));
+  document.querySelectorAll('.menu li').forEach(li => li.classList.remove('active'));
   element.classList.add('active');
 }
 
-/* ✅ SweetAlert Logout Confirmation */
-function logout(){
+// Logout with SweetAlert
+function logout() {
   Swal.fire({
-    title: 'Are you sure you want to log out?',
-    text: "You will be redirected to the login page.",
+    title: 'Logout Confirmation',
+    text: "Are you sure you want to log out?",
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Yes, log me out',
+    confirmButtonColor: '#0ea5e9',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Yes, logout',
     cancelButtonText: 'Cancel'
   }).then((result) => {
     if (result.isConfirmed) {
       Swal.fire({
         title: 'Logging out...',
+        text: 'See you soon!',
         icon: 'success',
         showConfirmButton: false,
-        timer: 1000
+        timer: 1200
       });
       setTimeout(() => {
         window.location.href = '../login.php';
-      }, 1000);
+      }, 1200);
     }
+  });
+}
+
+// Mobile Sidebar Toggle
+if (window.innerWidth <= 768) {
+  toggleBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('active');
   });
 }
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-

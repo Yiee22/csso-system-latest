@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['username']) || !in_array($_SESSION['usertype'], ['Governor', 'Vice Governor'])) {
+if (!isset($_SESSION['username']) || !in_array($_SESSION['usertype'], ['Secretary', 'Treasurer', 'Auditor', 'Social Manager', 'Senator', 'Governor', 'Vice Governor'])) {
     header("Location: ../login.php");
     exit();
 }
@@ -10,36 +10,55 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// DELETE FUNCTION
+// ✅ DELETE FUNCTION (with related tables)
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
-    $conn->query("DELETE FROM student_profile WHERE students_id = $delete_id");
 
-    echo "<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>";
-    echo "<script>
-        window.onload = function() {
+    $conn->begin_transaction();
+
+    try {
+        // Delete related records first (respect foreign key relationship)
+        $conn->query("DELETE FROM family_background WHERE students_id = $delete_id");
+        $conn->query("DELETE FROM educational_background WHERE students_id = $delete_id");
+        $conn->query("DELETE FROM student_profile WHERE students_id = $delete_id");
+
+        $conn->commit();
+
+        echo "<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>";
+        echo "<script>
+            window.onload = function() {
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: 'Student record and related information deleted successfully!',
+                    icon: 'success',
+                    confirmButtonColor: '#2563eb',
+                    confirmButtonText: 'OK',
+                    position: 'center',
+                    width: '340px',
+                    padding: '0.6em',
+                    customClass: { popup: 'swal-small-popup' }
+                }).then(() => {
+                    window.location = 'students.php';
+                });
+            };
+        </script>";
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo "<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>";
+        echo "<script>
             Swal.fire({
-                title: 'Deleted!',
-                text: 'Student record deleted successfully!',
-                icon: 'success',
-                confirmButtonColor: '#2563eb',
-                confirmButtonText: 'OK',
-                position: 'center',
-                width: '320px',
-                padding: '0.6em',
-                customClass: {
-                    popup: 'swal-small-popup'
-                }
-            }).then(() => {
-                window.location = 'students.php';
+                title: 'Error!',
+                text: 'Failed to delete student: " . addslashes($e->getMessage()) . "',
+                icon: 'error',
+                confirmButtonColor: '#dc2626'
             });
-        };
-    </script>";
+        </script>";
+    }
 }
 
-$course = isset($_GET['course']) ? $_GET['course'] : 'BSIT';
-$search = isset($_GET['search']) ? $_GET['search'] : '';
-$filter = isset($_GET['filter']) ? $_GET['filter'] : '';
+$course = $_GET['course'] ?? 'BSIT';
+$search = $_GET['search'] ?? '';
+$filter = $_GET['filter'] ?? '';
 
 $sql = "SELECT * FROM student_profile WHERE Course = '$course'";
 if (!empty($search)) {
@@ -64,104 +83,31 @@ $result = $conn->query($sql);
 <style>
 body { font-family: 'Segoe UI', sans-serif; background: #f7f9fc; margin:0; padding:0;}
 .container { padding: 20px; }
-
-h2 { 
-    display: flex; 
-    align-items: center; 
-    gap: 10px; 
-    font-size: 24px; 
-    color: #3167faff;
-    margin-bottom: 15px;
-}
-h2 i {
-    background: #3167faff;
-    color: white;
-    padding: 10px;
-    border-radius: 10px;
-    font-size: 20px;
-}
-
-.controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-    gap: 10px;
-}
-.filters {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-select, input[type="text"] {
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid #cbd5e1;
-    font-size: 15px;
-    outline: none;
-}
-button {
-    cursor: pointer;
-}
-.search-btn {
-    background:#2563eb;
-    color:#fff;
-    border:none;
-    border-radius:5px;
-    padding:6px 10px;
-}
+h2 { display:flex; align-items:center; gap:10px; font-size:24px; color:#3167faff; margin-bottom:15px;}
+h2 i { background:#3167faff; color:white; padding:10px; border-radius:10px; font-size:20px;}
+.controls { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:12px; gap:10px;}
+.filters { display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+select, input[type="text"] { padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:15px; outline:none;}
+button { cursor:pointer; }
+.search-btn { background:#2563eb; color:#fff; border:none; border-radius:5px; padding:6px 10px;}
 .search-btn:hover { background:#1d4ed8; }
-
-.clear-btn {
-    background: #64748b;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
-}
-.clear-btn:hover {
-    background: #475569;
-}
-
-.add-btn { 
-    background:#16a34a; 
-    color:#fff; 
-    padding:8px 12px; 
-    border:none; 
-    border-radius:5px; 
-    font-size:15px;
-}
+.clear-btn { background:#64748b; color:white; border:none; border-radius:6px; padding:6px 12px;}
+.clear-btn:hover { background:#475569; }
+.add-btn { background:#16a34a; color:#fff; padding:8px 12px; border:none; border-radius:5px; font-size:15px;}
 .add-btn:hover { background:#15803d; }
-
-.table-container { 
-    background:#fff; 
-    padding:15px; 
-    border-radius:8px; 
-    box-shadow:0 2px 8px rgba(0,0,0,0.05);
-}
+.table-container { background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05);}
 table { width:100%; border-collapse: collapse; }
 th, td { padding:12px; text-align:left; border-bottom:1px solid #e2e8f0; }
 th { background:#2563eb; color:#fff; text-transform: uppercase; }
 tr:hover { background:#f1f5f9; }
-
 .action-btn { border:none; padding:6px 10px; border-radius:5px; cursor:pointer; }
 .view-btn { background:#facc15; color:#1f2937; }
 .delete-btn { background:#ef4444; color:#fff; }
 h3 { text-align:center; color:#1e293b; margin-bottom:15px; font-size:18px; }
-
 /* SweetAlert Compact Design */
-.swal-small-popup {
-    font-size: 14px !important;
-    border-radius: 12px !important;
-}
-.swal2-title {
-    font-size: 18px !important;
-}
-.swal2-html-container {
-    font-size: 14px !important;
-}
+.swal-small-popup { font-size:14px !important; border-radius:12px !important;}
+.swal2-title { font-size:18px !important;}
+.swal2-html-container { font-size:14px !important;}
 </style>
 </head>
 <body>
@@ -194,11 +140,7 @@ h3 { text-align:center; color:#1e293b; margin-bottom:15px; font-size:18px; }
     </div>
 
     <div class="table-container">
-        <h3>
-            <?= $course === 'BSIT' 
-                ? 'Bachelor of Science in Information Technology' 
-                : 'Bachelor of Science in Computer Studies'; ?>
-        </h3>
+        <h3><?= $course === 'BSIT' ? 'Bachelor of Science in Information Technology' : 'Bachelor of Science in Computer Studies'; ?></h3>
 
         <table>
             <thead>
@@ -225,7 +167,7 @@ h3 { text-align:center; color:#1e293b; margin-bottom:15px; font-size:18px; }
                     <td><?= htmlspecialchars($row['Section']) ?></td>
                     <td><?= htmlspecialchars($row['YearLevel']) ?></td>
                     <td>
-                        <button class="action-btn view-btn"><i class="fa fa-pen"></i></button>
+                        <button class="action-btn view-btn" onclick="viewStudent(<?= $row['students_id'] ?>)"><i class="fa fa-pen"></i></button>
                         <button class="action-btn delete-btn" onclick="confirmDelete(<?= $row['students_id'] ?>)"><i class="fa fa-trash"></i></button>
                     </td>
                 </tr>
@@ -242,7 +184,7 @@ h3 { text-align:center; color:#1e293b; margin-bottom:15px; font-size:18px; }
 function confirmDelete(id) {
     Swal.fire({
         title: 'Are you sure?',
-        text: "This student record will be permanently deleted.",
+        text: "This student and all related data will be permanently deleted.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
@@ -253,22 +195,19 @@ function confirmDelete(id) {
         position: 'center',
         width: '340px',
         padding: '0.6em',
-        customClass: {
-            popup: 'swal-small-popup'
-        }
+        customClass: { popup: 'swal-small-popup' }
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = 'students.php?delete_id=' + id;
         }
     });
 }
+
+// ✅ View student record
+function viewStudent(id) {
+    window.location.href = 'viewstudents.php?students_id=' + id;
+}
 </script>
 </body>
 </html>
-
-
-
-
-
-
 

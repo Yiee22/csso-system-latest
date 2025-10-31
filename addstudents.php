@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['username']) || !in_array($_SESSION['usertype'], ['Governor', 'Vice Governor'])) {
+if (!isset($_SESSION['username']) || !in_array($_SESSION['usertype'], ['Secretary', 'Treasurer', 'Auditor', 'Social Manager', 'Senator', 'Governor', 'Vice Governor'])) {
     header("Location: ../login.php");
     exit();
 }
@@ -11,74 +11,94 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Save Student Info
+// ========== SAVE STUDENT INFO ==========
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $user_id = $_SESSION['user_id'];
-    $students_id = $_POST['students_id']; // Manual input by user
+    $students_id = $_POST['students_id']; // ✅ Manual input from user
 
-    // Generate fam_id and edu_id
-    $resultFam = $conn->query("SELECT COUNT(*) AS count FROM family_background");
-    $famCount = $resultFam->fetch_assoc()['count'] + 1;
-    $fam_id = "fam" . $famCount;
+    // Start Transaction
+    $conn->begin_transaction();
 
-    $resultEdu = $conn->query("SELECT COUNT(*) AS count FROM educational_background");
-    $eduCount = $resultEdu->fetch_assoc()['count'] + 1;
-    $edu_id = "edu" . $eduCount;
+    try {
+        // ====== 1. INSERT INTO student_profile ======
+        $stmt = $conn->prepare("INSERT INTO student_profile 
+            (students_id, user_id, FirstName, LastName, MI, Suffix, Course, YearLevel, Section, PhoneNumber, Gender, DOB, Age, Religion, EmailAddress, Street, Barangay, Municipality, Province, Zipcode)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param(
+            "iissssssssssisssssss",
+            $students_id, $user_id, $_POST['FirstName'], $_POST['LastName'], $_POST['MI'], $_POST['Suffix'],
+            $_POST['Course'], $_POST['YearLevel'], $_POST['Section'], $_POST['PhoneNumber'],
+            $_POST['Gender'], $_POST['DOB'], $_POST['Age'], $_POST['Religion'],
+            $_POST['EmailAddress'], $_POST['Street'], $_POST['Barangay'],
+            $_POST['Municipality'], $_POST['Province'], $_POST['ZipCode']
+        );
+        $stmt->execute();
 
-    // Insert into student_profile
-    $stmt = $conn->prepare("INSERT INTO student_profile 
-        (students_id, user_id, FirstName, LastName, MI, Suffix, Course, YearLevel, Section, PhoneNumber, Gender, DOB, Age, Religion, EmailAddress, Street, Barangay, Municipality, Province, ZipCode) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("iissssssssssisssssss", 
-        $students_id, $user_id, $_POST['FirstName'], $_POST['LastName'], $_POST['MI'], $_POST['Suffix'], $_POST['Course'], 
-        $_POST['YearLevel'], $_POST['Section'], $_POST['PhoneNumber'], $_POST['Gender'], $_POST['DOB'], $_POST['Age'], 
-        $_POST['Religion'], $_POST['EmailAddress'], $_POST['Street'], $_POST['Barangay'], $_POST['Municipality'], 
-        $_POST['Province'], $_POST['ZipCode']
-    );
-
-    if ($stmt->execute()) {
-
-        // Insert into family_background
+        // ====== 2. INSERT INTO family_background ======
         $stmt2 = $conn->prepare("INSERT INTO family_background 
-            (fam_id, students_id, father_name, father_occupation, mother_name, mother_occupation, phone_number, siblings_count, guardian_name, guardian_occupation, contact_number, street, barangay, municipality, province, zipcode)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt2->bind_param("sisssssisssssss", 
-            $fam_id, $students_id,
-            $_POST['father_name'], $_POST['father_occupation'],
-            $_POST['mother_name'], $_POST['mother_occupation'],
-            $_POST['phone_number'], $_POST['siblings_count'],
-            $_POST['guardian_name'], $_POST['guardian_occupation'],
-            $_POST['contact_number'], $_POST['fam_street'],
-            $_POST['fam_barangay'], $_POST['fam_municipality'],
-            $_POST['fam_province'], $_POST['fam_zipcode']
+            (students_id, father_name, father_occupation, mother_name, mother_occupation, phone_number, siblings_count, guardian_name, guardian_occupation, contact_number, street, barangay, municipality, province, zipcode)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt2->bind_param(
+            "issssssisssssss",
+            $students_id,
+            $_POST['father_name'], $_POST['father_occupation'], $_POST['mother_name'], $_POST['mother_occupation'],
+            $_POST['phone_number'], $_POST['siblings_count'], $_POST['guardian_name'], $_POST['guardian_occupation'],
+            $_POST['contact_number'], $_POST['fam_street'], $_POST['fam_barangay'],
+            $_POST['fam_municipality'], $_POST['fam_province'], $_POST['fam_zipcode']
         );
         $stmt2->execute();
 
-        // Insert into educational_background
+        // ====== 3. INSERT INTO educational_background ======
         $stmt3 = $conn->prepare("INSERT INTO educational_background 
-            (edu_id, students_id, elementary, elem_year_grad, elem_received, junior_high, jr_high_grad, jr_received, senior_high, sr_high_grad, sr_received)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt3->bind_param("sissssssss", 
-            $edu_id, $students_id,
+            (students_id, elementary, elem_year_grad, elem_received, junior_high, jr_high_grad, jr_received, senior_high, sr_high_grad, sr_received)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt3->bind_param(
+            "isssssssss",
+            $students_id,
             $_POST['elementary'], $_POST['elem_year_grad'], $_POST['elem_received'],
             $_POST['junior_high'], $_POST['jr_high_grad'], $_POST['jr_received'],
             $_POST['senior_high'], $_POST['sr_high_grad'], $_POST['sr_received']
         );
         $stmt3->execute();
 
-        echo "<script>alert('Student successfully added!'); window.location='students.php';</script>";
-    } else {
-        echo "<script>alert('Error saving student data.');</script>";
+        // Commit all
+        $conn->commit();
+
+        echo "<script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Success!',
+                text: 'Student successfully added!',
+                icon: 'success',
+                confirmButtonColor: '#2563eb'
+            }).then(() => {
+                window.location = 'students.php';
+            });
+        });
+        </script>";
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo "<script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Error saving student data: " . addslashes($e->getMessage()) . "',
+                icon: 'error',
+                confirmButtonColor: '#dc2626'
+            });
+        });
+        </script>";
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Add Student | CSSO</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
 body { font-family:'Segoe UI',sans-serif; background:#f8fafc; margin:0; padding:0; }
 .container { width:90%; max-width:900px; margin:30px auto; background:#fff; border-radius:10px; padding:25px; box-shadow:0 2px 10px rgba(0,0,0,0.1);}
@@ -99,12 +119,12 @@ button { border:none; padding:10px 18px; border-radius:6px; cursor:pointer; font
 </style>
 <script>
 function calculateAge() {
-    const dob = document.querySelector('input[name="DOB"]').value;
+    const dob = document.querySelector('input[name=\"DOB\"]').value;
     if(dob){
         const birthDate = new Date(dob);
         const diff = Date.now() - birthDate.getTime();
         const age = new Date(diff).getUTCFullYear() - 1970;
-        document.querySelector('input[name="Age"]').value = age;
+        document.querySelector('input[name=\"Age\"]').value = age;
     }
 }
 </script>
@@ -117,7 +137,7 @@ function calculateAge() {
     <!-- STUDENT PROFILE -->
     <section>
         <h3>Student Profile</h3>
-        <label>Students ID</label><input type="text" name="students_id" required>
+        <label>Students ID</label><input type="number" name="students_id" required>
         <label>First Name</label><input type="text" name="FirstName" required>
         <label>Last Name</label><input type="text" name="LastName" required>
         <label>Middle Initial</label><input type="text" name="MI">
@@ -181,7 +201,6 @@ function calculateAge() {
     <!-- FAMILY BACKGROUND -->
     <section>
         <h3>Family Background</h3>
-        <input type="hidden" name="fam_id" class="hidden">
         <label>Father's Name</label><input type="text" name="father_name" required>
         <label>Father's Occupation</label><input type="text" name="father_occupation">
         <label>Mother's Name</label><input type="text" name="mother_name">
@@ -201,7 +220,6 @@ function calculateAge() {
     <!-- EDUCATIONAL BACKGROUND -->
     <section>
         <h3>Educational Background</h3>
-        <input type="hidden" name="edu_id" class="hidden">
         <label>Elementary School</label><input type="text" name="elementary">
         <label>Year Graduated</label><input type="date" name="elem_year_grad">
         <label>Received</label><input type="text" name="elem_received">
@@ -221,6 +239,3 @@ function calculateAge() {
 </div>
 </body>
 </html>
-
-
-
